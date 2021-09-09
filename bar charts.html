@@ -1,0 +1,327 @@
+<html>
+<head>
+<script src=https://code.jquery.com/jquery-3.4.1.min.js>
+
+
+
+
+
+
+</script>
+
+<script>
+var barVals = [];
+var barValsXs =[{ x1: ' ',x2: ' ' ,y: ' ',num: ' '}];
+var canvas;
+
+
+
+
+
+
+
+function draw() {
+	canvas = document.getElementById("canvas");
+	var ctx = canvas.getContext("2d");
+	ctx.clearRect(0,0,600,450);
+	
+
+	
+	// calculate highest bar value (used to scale the rest)
+	var highest = 0;
+	for (var b=0; b<barVals.length; b++) {
+		if (barVals[b]>highest)
+			highest=barVals[b];
+	}//end for
+	// we have 8 horizontal lines so calculate an appropriate scale
+	var lineSpacing = 1;
+	var highestLine = 7*lineSpacing;
+	while (highestLine<highest) {
+		lineSpacing *= 10;
+		highestLine = 7*lineSpacing;
+	}//end while
+		
+	// grey background
+	ctx.fillStyle = "rgb(200,200,200)";
+	ctx.fillRect (0, 0, 600, 450);
+		
+	// draw and (if we have any data to scale from) label horizontal lines
+	var lineNum = 0;
+	ctx.fillStyle="white";
+	ctx.font="16px sans-serif";
+	for (y=0; y<=350; y+=50) {
+		// line
+		ctx.beginPath();
+		ctx.moveTo(50,y+50);
+		ctx.lineTo(550,y+50);
+		ctx.stroke();
+		// label (the 6 is an offset to centre the text vertically on the line)
+		if (barVals.length>0) {
+			ctx.fillText(lineSpacing*lineNum, 10, 400-y+6); 
+			lineNum++;
+		}//end if
+	}//end for
+
+	
+	var chartT = document.querySelector('input[name = chartType]:checked').value;
+	console.log(chartT);
+	
+	if (chartT == 'Bar'){
+	barValsXs = [];
+	// draw boxes (widths based on how many we have)
+	var barWidth = 500/barVals.length;
+	var halfBarWidth = barWidth/2;
+	for (b=0; b<barVals.length; b++) {
+		// calculate size of box and draw it
+		var x = 60+(b*barWidth);
+		console.log(x);
+		
+		var x2 =x+barWidth;
+		console.log(x2);
+		var num = barVals[b];
+		
+		var hgt = (barVals[b]/highestLine)*350; // as fraction of highest line
+		if (b%2==0)
+			ctx.fillStyle = "red";
+		else
+			ctx.fillStyle = "blue";
+		
+		barValsXs.push({ x1:x, x2:x2, y: hgt, num: num});	
+		ctx.fillRect(x,400-hgt,barWidth,hgt);
+		// calculate position of text and draw it
+		ctx.fillStyle="white";
+		var metrics = ctx.measureText(barVals[b]);
+		var halfTextWidth = metrics.width/2;
+		x = 60+halfBarWidth+(b*barWidth)-halfTextWidth;
+		ctx.fillText(barVals[b], x, 420-hgt); 
+		
+	}//end for loop
+	}//end if bar
+
+	else if(chartT == 'Line'){
+		var barWidth = 500/barVals.length;
+		var halfBarWidth = barWidth/2;
+		for(b=0; b<barVals.length; b++){
+			var x = 60+b*barWidth;
+			var xPrev = 60+[b-1]*barWidth
+			var hgt = (barVals[b]/highestLine)*350; // as fraction of highest line
+			var hgtPrev = (barVals[(b-1)]/highestLine)*350
+				if (b%2==0)
+					ctx.fillStyle = "red";
+				else
+					ctx.fillStyle = "blue";
+					ctx.beginPath();
+					ctx.arc(x,400-hgt,2,0, 2* Math.PI);
+					ctx.stroke();
+			//ctx.fillStyle="white";
+		var metrics = ctx.measureText(barVals[b]);
+		var halfTextWidth = metrics.width/2;
+		//x = 60+halfBarWidth+(b*barWidth)-halfTextWidth;
+		ctx.fillText(barVals[b], x, 420-hgt);
+		ctx.beginPath();
+			ctx.moveTo(xPrev,(400-hgtPrev));
+			ctx.lineTo(x,(400-hgt));
+			ctx.stroke();
+		}//end of for loop
+	
+	}//end of if "Line"
+
+		
+	
+	
+
+
+	
+}//end of draw
+
+
+
+//Get Mouse Position
+function getMousePos(canvas, evt) {
+    var rect = canvas.getBoundingClientRect();
+    return {
+        x: evt.clientX - rect.left,
+        y: evt.clientY - rect.top
+    };
+}//end mousepos
+
+
+function addBar() {
+
+	var textBoxObj = document.getElementById("barVal"); 
+	barVals.push(parseInt(textBoxObj.value)); // add new value to end of array. As an integer not a string!!
+	refreshSel();
+	draw(); // redraw
+	textBoxObj.value = 0;	
+}//end add bar
+
+
+
+function refreshSel(){
+
+	var select = document.getElementById('barValues'); // get the select list
+	for (var option in select){
+    select.remove(option);} // clear select before populating preventing duplicates
+	for(var i = 0; i < barVals.length; i++){
+		
+		var opt = barVals[i];
+		var el = document.createElement("option");
+		 el.text = opt;
+		 el.value = opt;
+
+		select.add(el); }; //add array of values to select end for loop
+
+
+}//end refresh sel
+
+
+
+function deleteSel(){
+		var selected = document.getElementById("barValues");
+		var barSelected = selected.options[selected.selectedIndex].value;
+		console.log(barSelected);
+		
+		for(i=0;i<barVals.length;i++){
+			if(barSelected == barVals[i]){
+			 barVals.splice(i,1);
+			 barValsXs.splice(i,1);
+			}//end if
+		}//end for
+		refreshSel();
+		draw();
+}//end del
+
+function start(){
+	var $menu = $('#contextMenu');
+	var bb=canvas.getBoundingClientRect();
+	var offsetX=bb.left;
+	var offsetY=bb.top;
+	canvas.addEventListener("click", function (evt) {
+    var mousePos = getMousePos(canvas, evt);	
+	evt.preventDefault();
+	 	for (b=0; b< (barVals.length); b++) {
+		
+		if (mousePos.x >= barValsXs[b].x1 && mousePos.x <= barValsXs[b].x2) {
+			console.log("this is b in click area"+ barVals[b]);
+			console.log( barValsXs);
+			break;
+						
+		}//end if mouse pos
+		
+				//var y0 = (barVals[b]/highestLine)*350; // as fraction of highest line
+					
+	}//end for loops
+	
+	;
+     }, true); 
+	 
+	 
+	 
+		canvas.addEventListener('contextmenu', handleContextMenu, false);
+		canvas.addEventListener('mousedown', handleMouseDown, false);
+		
+	function handleContextMenu(e){
+				e.preventDefault();
+				e.stopPropagation();
+				var mousePos = getMousePos(canvas, e);
+				//var x = parseInt(mousePos.x);
+				//var y = parseInt(mousePos.y);
+				console.log(mousePos.x,mousePos.y);
+				$menu.css({left:mousePos.x+350,top:mousePos.y});
+				$menu.show();
+				for (b=0; b< (barVals.length); b++) {
+		
+		if (mousePos.x >= barValsXs[b].x1 && mousePos.x <= barValsXs[b].x2) {
+			console.log("this is b in click area"+ barVals[b]);
+			console.log( barValsXs);
+			break;
+						
+		}//end if
+				return(false);
+				}//end for
+
+
+					function handleMouseDown(e){
+						$menu.hide();
+						}//end mouse down
+						
+		menu = function(n){
+
+			console.log("select menu "+n);
+			$menu.hide();
+			}}
+}	//end of start
+
+
+
+
+
+
+
+
+
+
+
+
+</script>
+</head>S
+<style>
+#canvasContainer{
+	position:relative
+}
+
+
+#contextMenu{
+  position:absolute;
+  border:1px solid green;
+  background:white;
+  list-style:none;
+  padding:3px;
+}
+.menu-item:hover {
+  background: #dddddd;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+
+</style>
+<body onload="draw(),start();">
+<center>
+
+<div id=canvasContainer>
+<canvas id="canvas" width="600" height="450"></canvas>
+  <ul id="contextMenu" style="display:none;">
+    <li class="menu-item" onclick="menu(1)">Menu 1</li>
+    <li class="menu-item" onclick="menu(2)">Menu 2</li>
+  </ul>
+  </div>
+<form>
+<BR>
+<input type=button value='Add Bar' onclick='addBar();'> <input id='barVal' value=0>
+</form>
+<form id='type'>
+<div>
+<input type="radio" id="typeBar" name="chartType" value="Bar" checked>
+<label for="typeBar"> Bar Chart</label>
+<input type="radio" id="typeLine" name="chartType" value="Line">
+<label for="typeBar"> Line Chart</label>
+</div>
+<div>
+<button type=button value='Change chart type' onclick='draw();'>Change Chart</button> 
+</div>
+</form>
+
+
+<form>
+<div>
+<!--<label for <"deleteOp"> Choose which bar to delete: </label>-->
+<select name = "barValues" id = "barValues"></select>
+<button type=button value='Delete' onclick='deleteSel();'>Delete Selected</button>
+
+</div>
+</form>
+
+</center>
+</body>
+</html>
